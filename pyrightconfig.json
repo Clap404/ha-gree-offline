@@ -1,6 +1,6 @@
 {
   "include": ["custom_components"],
-  "pythonVersion": "3.12",
+  "pythonVersion": "3.13",
   "venvPath": ".",
   "venv": ".venv",
   "reportMissingTypeStubs": "none",
