@@ -13,6 +13,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     CONF_ADVERTISED_IP,
+    CONF_ALLOWED_NETWORKS,
     CONF_IP,
     CONF_LAST_CLOUD_HANDSHAKE,
     CONF_MAC,
@@ -26,7 +27,7 @@ from .const import (
     SIGNAL_STATS,
 )
 from .entries import unit_entries, unit_entry_for_mac
-from .server import GreeServer
+from .server import GreeServer, parse_networks
 from .units import UnitTracker
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,9 +50,13 @@ async def async_setup_hub(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     options = entry.options
+    if not (allowed_networks := parse_networks(options.get(CONF_ALLOWED_NETWORKS, ""))):
+        _LOGGER.error("no allowed networks; set them in the integration options")
+        return False
     server = GreeServer(
         units,
         advertised_ip=advertised_ip,
+        allowed_networks=allowed_networks,
         cert_dir=hass.config.path(DOMAIN),
         region=options.get(CONF_REGION, DEFAULT_REGION),
         resolvers=_split_list(options.get(CONF_RESOLVER, DEFAULT_RESOLVERS)),

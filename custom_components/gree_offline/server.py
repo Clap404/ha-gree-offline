@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
+import ipaddress
 import logging
 
 from . import tls
@@ -15,6 +16,18 @@ from .units import UnitTracker
 
 _LOGGER = logging.getLogger(__name__)
 
+Network = ipaddress.IPv4Network | ipaddress.IPv6Network
+Handler = Callable[[asyncio.StreamReader, asyncio.StreamWriter], Awaitable[None]]
+
+
+def parse_networks(value: str) -> tuple[Network, ...]:
+    """Comma-separated CIDRs; raises ValueError on a bad one."""
+    return tuple(
+        ipaddress.ip_network(item.strip(), strict=False)
+        for item in value.split(",")
+        if item.strip()
+    )
+
 
 class GreeServer:
     def __init__(
@@ -22,6 +35,7 @@ class GreeServer:
         units: UnitTracker,
         *,
         advertised_ip: str,
+        allowed_networks: Sequence[Network],
         cert_dir: str,
         region: str,
         resolvers: Sequence[str],
@@ -29,6 +43,7 @@ class GreeServer:
     ) -> None:
         self.units = units
         self.advertised_ip = advertised_ip
+        self._allowed_networks = tuple(allowed_networks)
         self._cert_dir = cert_dir
         self._listeners: list[asyncio.Server] = []
         resolver = ExternalResolver(resolvers)
@@ -50,7 +65,7 @@ class GreeServer:
         try:
             for handler, port, ctx in endpoints:
                 self._listeners.append(
-                    await asyncio.start_server(handler, "0.0.0.0", port, ssl=ctx)
+                    await asyncio.start_server(self._guarded(handler), "0.0.0.0", port, ssl=ctx)
                 )
         except OSError:
             await self.stop()
@@ -69,3 +84,14 @@ class GreeServer:
         for listener in self._listeners:
             await listener.wait_closed()
         self._listeners = []
+
+    def _guarded(self, handler: Handler) -> Handler:
+        async def guarded(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            peer = ipaddress.ip_address(writer.get_extra_info("peername")[0])
+            if not any(peer in network for network in self._allowed_networks):
+                _LOGGER.debug("rejected connection from %s", peer)
+                writer.close()
+                return
+            await handler(reader, writer)
+
+        return guarded

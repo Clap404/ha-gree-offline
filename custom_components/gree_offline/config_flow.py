@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any
 
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
+from homeassistant.components.network import async_get_adapters
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -13,13 +15,14 @@ from homeassistant.config_entries import (
     OptionsFlow,
     OptionsFlowWithReload,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 import voluptuous as vol
 
 from .ble import OnboardError, async_onboard
 from .const import (
     CONF_ADVERTISED_IP,
+    CONF_ALLOWED_NETWORKS,
     CONF_IP,
     CONF_KIND,
     CONF_MAC,
@@ -40,7 +43,7 @@ from .const import (
     unit_unique_id,
 )
 from .entries import hub_entry, hub_server
-from .server import GreeServer
+from .server import GreeServer, parse_networks
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,12 +61,35 @@ def _hub_schema(current: dict[str, Any]) -> vol.Schema:
                 CONF_REGION, default=current.get(CONF_REGION, DEFAULT_REGION)
             ): REGION_SELECTOR,
             vol.Optional(CONF_ADVERTISED_IP, default=current.get(CONF_ADVERTISED_IP, "")): str,
+            vol.Required(
+                CONF_ALLOWED_NETWORKS, default=current.get(CONF_ALLOWED_NETWORKS, "")
+            ): str,
             vol.Optional(CONF_RESOLVER, default=current.get(CONF_RESOLVER, DEFAULT_RESOLVERS)): str,
             vol.Optional(
                 CONF_SINK_DELAY, default=current.get(CONF_SINK_DELAY, DEFAULT_SINK_DELAY)
             ): vol.All(vol.Coerce(float), vol.Range(min=0, max=5)),
         }
     )
+
+
+async def _default_networks(hass: HomeAssistant) -> str:
+    """Subnet of Home Assistant's default network adapter."""
+    for adapter in await async_get_adapters(hass):
+        if adapter["default"] and adapter["ipv4"]:
+            ipv4 = adapter["ipv4"][0]
+            return str(
+                ipaddress.ip_network(f"{ipv4['address']}/{ipv4['network_prefix']}", strict=False)
+            )
+    return ""
+
+
+def _hub_errors(user_input: dict[str, Any]) -> dict[str, str]:
+    try:
+        if parse_networks(user_input[CONF_ALLOWED_NETWORKS]):
+            return {}
+    except ValueError:
+        pass
+    return {CONF_ALLOWED_NETWORKS: "invalid_networks"}
 
 
 def _unit_data(mac: str, ip: str | None = None) -> dict[str, Any]:
@@ -92,11 +118,18 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
         """Manual setup of the server hub."""
         if hub_entry(self.hass) is not None:
             return self.async_abort(reason="single_instance_allowed")
-        if user_input is not None:
+        errors: dict[str, str] = {}
+        if user_input is not None and not (errors := _hub_errors(user_input)):
             return self.async_create_entry(
                 title="Gree Offline server", data={CONF_KIND: KIND_HUB}, options=user_input
             )
-        return self.async_show_form(step_id="user", data_schema=_hub_schema({}))
+        return self.async_show_form(
+            step_id="user",
+            data_schema=_hub_schema(
+                user_input or {CONF_ALLOWED_NETWORKS: await _default_networks(self.hass)}
+            ),
+            errors=errors,
+        )
 
     # Unit already on Wi-Fi
 
@@ -187,8 +220,17 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
 
 class GreeOfflineOptionsFlow(OptionsFlowWithReload):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if user_input is not None:
+        errors: dict[str, str] = {}
+        if user_input is not None and not (errors := _hub_errors(user_input)):
             return self.async_create_entry(data=user_input)
         return self.async_show_form(
-            step_id="init", data_schema=_hub_schema(dict(self.config_entry.options))
+            step_id="init",
+            data_schema=_hub_schema(
+                user_input
+                or {
+                    CONF_ALLOWED_NETWORKS: await _default_networks(self.hass),
+                    **self.config_entry.options,
+                }
+            ),
+            errors=errors,
         )

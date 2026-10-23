@@ -5,6 +5,7 @@ SIGNAL_STATS = f"{DOMAIN}_stats"
 
 # Hub options
 CONF_ADVERTISED_IP = "advertised_ip"
+CONF_ALLOWED_NETWORKS = "allowed_networks"
 CONF_REGION = "region"
 CONF_RESOLVER = "resolver"
 CONF_SINK_DELAY = "sink_delay"

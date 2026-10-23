@@ -8,6 +8,7 @@
         "data": {
           "region": "Gree cloud region",
           "advertised_ip": "Advertised IP (blank = auto)",
+          "allowed_networks": "Networks your units connect from (CIDRs)",
           "resolver": "External DNS used to reach Gree when your DNS redirects its names (comma-separated)",
           "sink_delay": "Seconds before closing a unit's MQTT retry (longer = fewer retries, slower local replies)"
         }
@@ -27,7 +28,8 @@
     },
     "error": {
       "onboard_failed": "Onboarding failed. Check the unit is in pairing mode and the Wi-Fi password is correct, then retry.",
-      "hub_not_loaded": "The Gree Offline server is not running. Check its entry loads, then retry."
+      "hub_not_loaded": "The Gree Offline server is not running. Check its entry loads, then retry.",
+      "invalid_networks": "Invalid network list. Use comma-separated CIDRs, e.g. 192.168.66.0/24."
     },
     "abort": {
       "single_instance_allowed": "The Gree Offline server is already configured.",
@@ -42,10 +44,14 @@
         "data": {
           "region": "Gree cloud region",
           "advertised_ip": "Advertised IP (blank = auto)",
+          "allowed_networks": "Networks your units connect from (CIDRs)",
           "resolver": "External DNS used to reach Gree when your DNS redirects its names (comma-separated)",
           "sink_delay": "Seconds before closing a unit's MQTT retry (longer = fewer retries, slower local replies)"
         }
       }
+    },
+    "error": {
+      "invalid_networks": "Invalid network list. Use comma-separated CIDRs, e.g. 192.168.66.0/24."
     }
   }
 }
