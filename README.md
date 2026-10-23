@@ -33,7 +33,8 @@ container setup), and TCP ports 1813, 5000 and 1992 must be free.
 
 ### Options
 
-- **Advertised IP**: the address units are told to connect to. Leave blank to use Home Assistant's own IP, detected automatically. Set it if Home Assistant has several addresses or sits behind a NAT/proxy and units cannot reach the detected one.
+- **Advertised IP**: the address units are told to connect to. Leave blank to use Home Assistant's own IP, detected automatically. Set it if Home Assistant has several addresses or sits behind a NAT/proxy and units cannot reach the detected one. Ideally it is the address your DNS redirect points to.
+- **Allowed networks** (required): comma-separated CIDRs your units connect from, e.g. `192.168.67.0/24` for an IoT VLAN. Pre-filled with Home Assistant's own subnet. Connections from anywhere else are closed right away, so Home Assistant must see the units' real addresses (no NAT in between).
 - **Sink delay** (default 0.5 s): how long each of a unit's MQTT retries is held before being closed. Longer means fewer retries, but the unit does not answer local commands while held, so its replies to Home Assistant get slower. 0 closes immediately.
 
 ## DNS redirect
