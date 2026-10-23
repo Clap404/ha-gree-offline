@@ -76,6 +76,7 @@ async def async_setup_hub(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_hub(entry: ConfigEntry) -> bool:
+    _LOGGER.debug("unloading Gree Offline server")
     server: GreeServer | None = getattr(entry, "runtime_data", None)
     if server:
         await server.stop()

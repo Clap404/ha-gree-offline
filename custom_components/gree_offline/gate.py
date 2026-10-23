@@ -34,6 +34,12 @@ class MqttGate:
         mac = self.units.mac_for_ip(peer)
         if mac is not None:
             self.units.mark_seen(mac)
+        _LOGGER.debug(
+            "gate %s: mac=%s upstream=%s",
+            peer,
+            mac,
+            mac is not None and self.units.upstream_allowed(mac),
+        )
         if mac is None or not self.units.upstream_allowed(mac):
             await self._sink(reader, writer)
             return

@@ -80,6 +80,7 @@ class _Session:
 
     def _handle(self, message: dict) -> None:
         kind: str = message.get("t", "")
+        _LOGGER.debug("ble rx t=%s", kind)
         if kind == "pack":
             if (key := self._key(message.get("i"))) is None:
                 return
@@ -109,6 +110,7 @@ async def async_onboard(
     if device is None:
         raise OnboardError(f"{address} not reachable over any Bluetooth adapter/proxy")
 
+    _LOGGER.debug("onboard %s: connecting", address)
     try:
         client = await establish_connection(BleakClientWithServiceCache, device, address)
     except BleakError as e:
@@ -116,6 +118,7 @@ async def async_onboard(
     session = _Session(client)
     try:
         await client.start_notify(CHAR_RX, session.on_notify)
+        _LOGGER.debug("onboard %s: connected, sending bind", address)
 
         bind = {"t": "bind", "mac": bare_mac(address)[-4:], "IsCP": 1}
         try:
@@ -124,6 +127,7 @@ async def async_onboard(
         except TimeoutError as e:
             raise OnboardError("no blekey (unit not in pairing mode?)") from e
 
+        _LOGGER.debug("onboard %s: got blekey, sending wlan (host %s)", address, dis_host(region))
         wlan = {"t": "wlan", "host": dis_host(region), "psw": password, "ssid": ssid, "num": 1}
         try:
             async with asyncio.timeout(WIFI_TIMEOUT):
@@ -131,6 +135,9 @@ async def async_onboard(
         except TimeoutError as e:
             raise OnboardError(f"no bleinfo within {WIFI_TIMEOUT}s (wrong Wi-Fi password?)") from e
 
+        _LOGGER.debug(
+            "onboard %s: bleinfo wificon=%s mac=%s", address, info.get("wificon"), info.get("mac")
+        )
         if info.get("wificon") != 1:
             raise OnboardError(f"unit reported wificon={info.get('wificon')}")
         return info

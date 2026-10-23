@@ -138,6 +138,7 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """A unit already on Wi-Fi contacted the server."""
         self._seen_mac, self._seen_ip = discovery_info[CONF_MAC], discovery_info[CONF_IP]
+        _LOGGER.debug("adoption offer for %s at %s", self._seen_mac, self._seen_ip)
         await self.async_set_unique_id(unit_unique_id(self._seen_mac))
         self._abort_if_unique_id_configured()
         self.context["title_placeholders"] = {"name": f"{self._seen_mac} ({self._seen_ip})"}
@@ -159,6 +160,7 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> ConfigFlowResult:
         """A unit in pairing mode is advertising over Bluetooth."""
+        _LOGGER.debug("bluetooth discovery %s (%s)", discovery_info.address, discovery_info.name)
         await self.async_set_unique_id(unit_unique_id(discovery_info.address))
         self._abort_if_unique_id_configured()
         self._bluetooth = discovery_info
@@ -169,13 +171,16 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         assert self._bluetooth is not None
-        if (hub := hub_entry(self.hass)) is None:
-            return self.async_abort(reason="no_hub")
         address = self._bluetooth.address
+        if (hub := hub_entry(self.hass)) is None:
+            _LOGGER.debug("onboard %s: no hub entry, aborting", address)
+            return self.async_abort(reason="no_hub")
 
         errors: dict[str, str] = {}
         if user_input is not None:
+            _LOGGER.debug("onboard %s: submitted for SSID %r", address, user_input[CONF_SSID])
             if (server := hub_server(self.hass)) is None:
+                _LOGGER.warning("onboard %s: hub entry not loaded", address)
                 errors["base"] = "hub_not_loaded"
             else:
                 try:
@@ -184,6 +189,7 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "onboard_failed"
                     _LOGGER.warning("onboard %s failed: %s", address, e)
                 else:
+                    _LOGGER.debug("onboard %s: done", address)
                     await self._reload_core_gree()
                     mac = bare_mac(address)
                     return self.async_create_entry(title=f"Gree {mac}", data=_unit_data(mac))
