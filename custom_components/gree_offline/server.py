@@ -16,6 +16,7 @@ from .units import UnitTracker
 
 _LOGGER = logging.getLogger(__name__)
 
+BIND_ADDRESS = "0.0.0.0"
 Network = ipaddress.IPv4Network | ipaddress.IPv6Network
 Handler = Callable[[asyncio.StreamReader, asyncio.StreamWriter], Awaitable[None]]
 
@@ -65,14 +66,14 @@ class GreeServer:
         try:
             for handler, port, ctx in endpoints:
                 self._listeners.append(
-                    await asyncio.start_server(self._guarded(handler), "0.0.0.0", port, ssl=ctx)
+                    await asyncio.start_server(self._guarded(handler), BIND_ADDRESS, port, ssl=ctx)
                 )
         except OSError:
             await self.stop()
             raise
         _LOGGER.info(
             "listening on %s:%d/%d, gate :%d",
-            self.advertised_ip,
+            BIND_ADDRESS,
             DIS_PORT,
             DIS_PLAIN_PORT,
             GATE_PORT,
