@@ -1,0 +1,58 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, e.g. 1.2.0
+        required: true
+      prerelease:
+        description: Mark the GitHub release as a pre-release
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump manifest, tag, and publish release
+        env:
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v="${VERSION#v}"
+          if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$'; then
+            echo "::error::'$VERSION' is not a semver version"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$v" >/dev/null; then
+            echo "::error::tag $v already exists"
+            exit 1
+          fi
+
+          manifest=custom_components/gree_offline/manifest.json
+          jq --arg v "$v" '.version = $v' "$manifest" > "$manifest.tmp"
+          mv "$manifest.tmp" "$manifest"
+
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git commit -am "chore: release $v" || echo "manifest already at $v"
+
+          # Tag the commit that carries the version, then publish from it:
+          # nothing is rewritten after the release exists, so no stale archive.
+          git tag "$v"
+          git push origin main "refs/tags/$v"
+
+          flags=(--generate-notes --title "$v" --target "$(git rev-parse HEAD)")
+          [ "$PRERELEASE" = "true" ] && flags+=(--prerelease)
+          gh release create "$v" "${flags[@]}"

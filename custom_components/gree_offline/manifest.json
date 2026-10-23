@@ -1,0 +1,30 @@
+{
+  "domain": "gree_offline",
+  "name": "Gree Offline",
+  "after_dependencies": [
+    "gree"
+  ],
+  "bluetooth": [
+    {
+      "connectable": true,
+      "local_name": "GR-AC_*"
+    },
+    {
+      "connectable": true,
+      "manufacturer_id": 3363
+    }
+  ],
+  "codeowners": [
+    "@Clap404"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "bluetooth_adapters",
+    "network"
+  ],
+  "documentation": "https://github.com/Clap404/ha-gree-offline",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Clap404/ha-gree-offline/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

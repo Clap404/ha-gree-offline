@@ -1,0 +1,50 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Gree Offline server",
+        "description": "Runs the local discovery server. Pick the Gree region your units belong to. Leave the advertised IP blank to auto-detect. With a router DNS redirect of REGION.dis.gree.com and mqtt-REGION.gree.com to this host, units reach Gree only while being onboarded here, and even then never receive cloud commands. Without the redirect they use Gree's cloud directly.",
+        "data": {
+          "region": "Gree cloud region",
+          "advertised_ip": "Advertised IP (blank = auto)",
+          "resolver": "External DNS used to reach Gree when your DNS redirects its names (comma-separated)",
+          "sink_delay": "Seconds before closing a unit's MQTT retry (longer = fewer retries, slower local replies)"
+        }
+      },
+      "onboard": {
+        "title": "Onboard {name}",
+        "description": "Enter the Wi-Fi the unit should join. The unit must be in pairing mode (MODE + WIFI on the remote until it beeps).",
+        "data": {
+          "ssid": "Wi-Fi SSID",
+          "password": "Wi-Fi password"
+        }
+      },
+      "adopt": {
+        "title": "Add Gree unit {mac}",
+        "description": "This unit ({mac}, {ip}) already talks to the Gree Offline server. Add it to get its diagnostics. No re-pairing is needed."
+      }
+    },
+    "error": {
+      "onboard_failed": "Onboarding failed. Check the unit is in pairing mode and the Wi-Fi password is correct, then retry."
+    },
+    "abort": {
+      "single_instance_allowed": "The Gree Offline server is already configured.",
+      "no_hub": "Set up the Gree Offline server before onboarding a unit.",
+      "already_configured": "This unit is already onboarded."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Gree Offline server",
+        "data": {
+          "region": "Gree cloud region",
+          "advertised_ip": "Advertised IP (blank = auto)",
+          "resolver": "External DNS used to reach Gree when your DNS redirects its names (comma-separated)",
+          "sink_delay": "Seconds before closing a unit's MQTT retry (longer = fewer retries, slower local replies)"
+        }
+      }
+    }
+  }
+}
