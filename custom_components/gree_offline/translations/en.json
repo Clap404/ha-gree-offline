@@ -26,7 +26,8 @@
       }
     },
     "error": {
-      "onboard_failed": "Onboarding failed. Check the unit is in pairing mode and the Wi-Fi password is correct, then retry."
+      "onboard_failed": "Onboarding failed. Check the unit is in pairing mode and the Wi-Fi password is correct, then retry.",
+      "hub_not_loaded": "The Gree Offline server is not running. Check its entry loads, then retry."
     },
     "abort": {
       "single_instance_allowed": "The Gree Offline server is already configured.",

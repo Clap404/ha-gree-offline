@@ -9,6 +9,7 @@ import json
 import logging
 
 from bleak import BleakClient
+from bleak.exc import BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
@@ -108,7 +109,10 @@ async def async_onboard(
     if device is None:
         raise OnboardError(f"{address} not reachable over any Bluetooth adapter/proxy")
 
-    client = await establish_connection(BleakClientWithServiceCache, device, address)
+    try:
+        client = await establish_connection(BleakClientWithServiceCache, device, address)
+    except BleakError as e:
+        raise OnboardError(f"cannot connect to {address}: {e!r}") from e
     session = _Session(client)
     try:
         await client.start_notify(CHAR_RX, session.on_notify)
@@ -130,6 +134,8 @@ async def async_onboard(
         if info.get("wificon") != 1:
             raise OnboardError(f"unit reported wificon={info.get('wificon')}")
         return info
+    except BleakError as e:
+        raise OnboardError(f"Bluetooth error with {address}: {e!r}") from e
     finally:
         with contextlib.suppress(Exception):
             await client.disconnect()

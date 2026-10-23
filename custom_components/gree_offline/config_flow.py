@@ -40,6 +40,7 @@ from .const import (
     unit_unique_id,
 )
 from .entries import hub_entry, hub_server
+from .server import GreeServer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,15 +142,18 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
         if user_input is not None:
-            try:
-                info = await self._onboard(hub, address, user_input)
-            except OnboardError as e:
-                errors["base"] = "onboard_failed"
-                _LOGGER.warning("onboard %s failed: %s", address, e)
+            if (server := hub_server(self.hass)) is None:
+                errors["base"] = "hub_not_loaded"
             else:
-                await self._reload_core_gree()
-                mac = info.get("mac") or bare_mac(address)
-                return self.async_create_entry(title=f"Gree {mac}", data=_unit_data(mac))
+                try:
+                    await self._onboard(hub, server, address, user_input)
+                except OnboardError as e:
+                    errors["base"] = "onboard_failed"
+                    _LOGGER.warning("onboard %s failed: %s", address, e)
+                else:
+                    await self._reload_core_gree()
+                    mac = bare_mac(address)
+                    return self.async_create_entry(title=f"Gree {mac}", data=_unit_data(mac))
 
         return self.async_show_form(
             step_id="onboard",
@@ -158,12 +162,12 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"name": self._bluetooth.name or address},
         )
 
-    async def _onboard(self, hub: ConfigEntry, address: str, user_input: dict[str, Any]) -> dict:
+    async def _onboard(
+        self, hub: ConfigEntry, server: GreeServer, address: str, user_input: dict[str, Any]
+    ) -> dict:
         """Push the Wi-Fi credentials; meanwhile the unit may reach Gree for its first handshake."""
-        server = hub_server(self.hass)
         mac = bare_mac(address)
-        if server:
-            server.units.allow_upstream(mac, ONBOARD_UPSTREAM_WINDOW)
+        server.units.allow_upstream(mac, ONBOARD_UPSTREAM_WINDOW)
         try:
             return await async_onboard(
                 self.hass,
@@ -173,8 +177,7 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
                 region=hub.options.get(CONF_REGION, DEFAULT_REGION),
             )
         finally:
-            if server:
-                server.units.end_upstream(mac)
+            server.units.end_upstream(mac)
 
     async def _reload_core_gree(self) -> None:
         """Let the core Gree integration discover the newly connected unit."""
