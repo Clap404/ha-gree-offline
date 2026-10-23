@@ -81,6 +81,8 @@ class GreeServer:
     async def stop(self) -> None:
         for listener in self._listeners:
             listener.close()
+            # wait_closed() also waits for open connections, which units hold for minutes.
+            listener.close_clients()
         for listener in self._listeners:
             await listener.wait_closed()
         self._listeners = []
