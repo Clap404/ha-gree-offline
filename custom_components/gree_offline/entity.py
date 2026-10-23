@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import callback
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
 
@@ -22,7 +22,10 @@ class GreeUnitEntity(Entity):
         self._mac: str = entry.data[CONF_MAC]
         self._attr_unique_id = f"{self._mac}_{key}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._mac)}, name=entry.title, manufacturer="Gree"
+            connections={(CONNECTION_NETWORK_MAC, self._mac)},
+            identifiers={(DOMAIN, self._mac)},
+            name=entry.title,
+            manufacturer="Gree",
         )
 
     @property
