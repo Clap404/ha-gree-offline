@@ -71,6 +71,8 @@ class DiscoveryService:
             else:
                 _LOGGER.info("dis %s %s: onboarding, relayed, broker %s", mac, peer, stats.broker)
                 return svr
+        else:
+            _LOGGER.info("dis %s %s: answered locally", mac, peer)
         return self._local_svr(tls_used, need_mqtt=bool(request.get("needMqtt")))
 
     async def _relayed_svr(self, line: bytes, tls_used: bool, stats: UnitStats) -> dict:

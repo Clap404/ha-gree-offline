@@ -24,8 +24,9 @@ The unit then stays connected to Wi-Fi, but keeps retrying Gree's MQTT server se
 1. Install through HACS (custom repository), or deploy manually by copying `custom_components/gree_offline` into your Home Assistant install.
 2. Restart Home Assistant, then add the **Gree Offline** integration and pick your units' region.
 3. Redirect Gree's DNS entries to your Home Assistant server (see below).
-4. Units already connected to your Wi-Fi network, and units in pairing mode (press MODE + WIFI on the remote until it beeps), show up in Home Assistant's **Devices & services** screen. Confirm them there.
-5. Once a unit is connected to your Wi-Fi network, Home Assistant's Gree integration picks it up normally.
+4. Units in pairing mode (press MODE + WIFI on the remote until it beeps) show up in Home Assistant's **Devices & services** screen. Confirm them there.
+5. Units already connected to your Wi-Fi network only look up the discovery server when they start. Power-cycle each one once the DNS redirect is in place and it shows up the same way.
+6. Once a unit is connected to your Wi-Fi network, Home Assistant's Gree integration picks it up normally.
 
 Home Assistant must use host networking (the default for Home Assistant OS, Supervised and the documented
 container setup), and TCP ports 1813, 5000 and 1992 must be free.
@@ -69,7 +70,7 @@ This integration builds on the work of:
 - [greeaclocalserver](https://github.com/SilentLeader/greeaclocalserver) by SilentLeader: local server emulation of the discovery protocol.
 - [gree-hvac-protocol](https://github.com/bekmansurov/gree-hvac-protocol) by bekmansurov: protocol documentation.
 
-Most of this code was written with AI assistance (Claude). It works on the author's units, but review it before trusting it with yours.
+This project was mostly vibe-coded, but human reviewed and tested.
 
 ## License
 

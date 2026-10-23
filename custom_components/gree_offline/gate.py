@@ -38,9 +38,10 @@ class MqttGate:
             await self._sink(reader, writer)
             return
 
-        broker = self.units.stats(mac).broker or await self._fallback_broker()
+        broker = self.units.stats(mac).broker or (self.mqtt_host, MQTT_PORT)
         try:
-            gree = await asyncio.wait_for(asyncio.open_connection(*broker), CONNECT_TIMEOUT)
+            ip = await self.resolver.resolve(broker[0])
+            gree = await asyncio.wait_for(asyncio.open_connection(ip, broker[1]), CONNECT_TIMEOUT)
         except Exception as e:
             _LOGGER.warning("gate %s cannot reach broker %s: %r", peer, broker, e)
             writer.close()
@@ -59,9 +60,3 @@ class MqttGate:
             pass
         finally:
             writer.close()
-
-    async def _fallback_broker(self) -> tuple[str, int]:
-        try:
-            return (await self.resolver.resolve(self.mqtt_host), MQTT_PORT)
-        except Exception:
-            return (self.mqtt_host, MQTT_PORT)
