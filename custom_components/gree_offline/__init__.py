@@ -6,10 +6,23 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import CONF_ALLOWED_NETWORKS
 from .entries import is_unit
-from .hub import async_setup_hub, async_unload_hub
+from .hub import async_setup_hub, async_unload_hub, default_networks
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        options = dict(entry.options)
+        if not is_unit(entry) and not options.get(CONF_ALLOWED_NETWORKS):
+            # Allowed networks became required in 1.1.0.
+            options[CONF_ALLOWED_NETWORKS] = await default_networks(hass)
+        hass.config_entries.async_update_entry(entry, options=options, minor_version=2)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

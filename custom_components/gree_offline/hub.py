@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from functools import partial
+import ipaddress
 import logging
 
-from homeassistant.components.network import async_get_source_ip
+from homeassistant.components.network import async_get_adapters, async_get_source_ip
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import discovery_flow
@@ -31,6 +32,17 @@ from .server import GreeServer, parse_networks
 from .units import UnitTracker
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def default_networks(hass: HomeAssistant) -> str:
+    """Subnet of Home Assistant's default network adapter."""
+    for adapter in await async_get_adapters(hass):
+        if adapter["default"] and adapter["ipv4"]:
+            ipv4 = adapter["ipv4"][0]
+            return str(
+                ipaddress.ip_network(f"{ipv4['address']}/{ipv4['network_prefix']}", strict=False)
+            )
+    return ""
 
 
 async def async_setup_hub(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import ipaddress
 import logging
 from typing import Any
 
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.components.network import async_get_adapters
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -15,7 +13,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
     OptionsFlowWithReload,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 import voluptuous as vol
 
@@ -43,6 +41,7 @@ from .const import (
     unit_unique_id,
 )
 from .entries import hub_entry, hub_server
+from .hub import default_networks
 from .server import GreeServer, parse_networks
 
 _LOGGER = logging.getLogger(__name__)
@@ -72,17 +71,6 @@ def _hub_schema(current: dict[str, Any]) -> vol.Schema:
     )
 
 
-async def _default_networks(hass: HomeAssistant) -> str:
-    """Subnet of Home Assistant's default network adapter."""
-    for adapter in await async_get_adapters(hass):
-        if adapter["default"] and adapter["ipv4"]:
-            ipv4 = adapter["ipv4"][0]
-            return str(
-                ipaddress.ip_network(f"{ipv4['address']}/{ipv4['network_prefix']}", strict=False)
-            )
-    return ""
-
-
 def _hub_errors(user_input: dict[str, Any]) -> dict[str, str]:
     try:
         if parse_networks(user_input[CONF_ALLOWED_NETWORKS]):
@@ -101,6 +89,7 @@ def _unit_data(mac: str, ip: str | None = None) -> dict[str, Any]:
 
 class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._bluetooth: BluetoothServiceInfoBleak | None = None
@@ -126,7 +115,7 @@ class GreeOfflineConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=_hub_schema(
-                user_input or {CONF_ALLOWED_NETWORKS: await _default_networks(self.hass)}
+                user_input or {CONF_ALLOWED_NETWORKS: await default_networks(self.hass)}
             ),
             errors=errors,
         )
@@ -234,7 +223,7 @@ class GreeOfflineOptionsFlow(OptionsFlowWithReload):
             data_schema=_hub_schema(
                 user_input
                 or {
-                    CONF_ALLOWED_NETWORKS: await _default_networks(self.hass),
+                    CONF_ALLOWED_NETWORKS: await default_networks(self.hass),
                     **self.config_entry.options,
                 }
             ),
